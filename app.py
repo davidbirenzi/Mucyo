@@ -13,10 +13,11 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -37,13 +38,18 @@ LANGUAGES = {
     'kinyarwanda': 'Kinyarwanda'
 }
 
-# Get OpenAI API key from environment variables
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY environment variable is required")
+# Get OpenAI API key from environment variables with fallback
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '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')
 
-# Initialize OpenAI client
-client = OpenAI(api_key=OPENAI_API_KEY)
+# Initialize OpenAI client with error handling
+try:
+    client = OpenAI(
+        api_key=OPENAI_API_KEY,
+        timeout=30.0
+    )
+except Exception as e:
+    print(f"Warning: OpenAI client initialization failed: {e}")
+    client = None
 
 
 def allowed_file(filename):
@@ -76,13 +82,16 @@ def extract_text_from_docx(file_path):
 
 def detect_language(text):
     """Detect the language of the given text using OpenAI."""
+    if not client:
+        raise Exception("OpenAI client not initialized")
+        
     prompt = f"""Detect the language of the following text. Respond with only one word from these options: English, French, Arabic, Swahili, Kinyarwanda.
 
 Text: {text[:500]}..."""
     
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a language detection expert. Respond with only the language name."},
                 {"role": "user", "content": prompt}
@@ -98,7 +107,10 @@ Text: {text[:500]}..."""
 
 
 def translate_text(text, source_language, target_language):
-    """Translate text using OpenAI GPT-4o model."""
+    """Translate text using OpenAI model."""
+    if not client:
+        raise Exception("OpenAI client not initialized")
+        
     if not text or not text.strip():
         raise Exception("No text to translate")
     
@@ -117,7 +129,7 @@ Text to translate:
     
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a professional translator specializing in educational documents with high accuracy."},
                 {"role": "user", "content": prompt}
