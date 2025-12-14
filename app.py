@@ -13,6 +13,10 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -33,8 +37,10 @@ LANGUAGES = {
     'kinyarwanda': 'Kinyarwanda'
 }
 
-# Hardcoded OpenAI API key
-OPENAI_API_KEY = "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"
+# Get OpenAI API key from environment variables
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY environment variable is required")
 
 # Initialize OpenAI client
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -272,5 +278,7 @@ def download(filename):
 
 
 if __name__ == '__main__':
+    # Get port from environment variable (Render sets this)
+    port = int(os.environ.get('PORT', 5000))
     # Run the Flask app
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=port)
